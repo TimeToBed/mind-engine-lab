@@ -1,3 +1,4 @@
+#models.py
 from __future__ import annotations
 
 from typing import Any, Dict, List, Literal, Optional, Tuple
@@ -61,8 +62,9 @@ class WorldModel(BaseModel):
 class Evidence(BaseModel):
     duration_s: float = 0.0
     progress_count: int = 0
-    capacity: int = 0
-    occupied: bool = False
+    # 允许接收 int 或 None，且默认值为 None
+    capacity: Optional[int] = None 
+    occupied: Optional[bool] = None
     action: Optional[str] = None
 
 class Deltas(BaseModel):
@@ -121,10 +123,8 @@ class PluginConfig(BaseModel):
 class ObservationGenConfig(BaseModel):
     seed: int = 42
     n: int = 20
-    duration_s_range: Tuple[float, float] = (30.0, 600.0)
-    nearby_agents_range: Tuple[int, int] = (0, 10)
-    progress_count_range: Tuple[int, int] = (0, 5)
-    choose_objects_max: int = 3
+    duration_s_range: Tuple[float, float] = (5.0, 50.0)
+    progress_count_range: Tuple[int, int] = (0, 20)
 
 
 class EngineConfig(BaseModel):

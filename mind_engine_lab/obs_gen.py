@@ -26,7 +26,7 @@ def _infer_capacity_occupied(world: WorldModel, facility_id: Optional[str]) -> t
     return 0, False
 
 
-def _infer_body_energy_delta(world: WorldModel, facility_id: Optional[str], object_ids: List[str], duration_s: float) -> float:
+def _infer_body_energy_delta(world: WorldModel, subject_id: Optional[str], duration_s: float) -> float:
     # 这里按“测试规范”生成 [-1,1] 的小范围物理变化：先把原始累计转为一个压缩值
     minutes = duration_s / 60.0
     raw = 0.0
@@ -37,22 +37,22 @@ def _infer_body_energy_delta(world: WorldModel, facility_id: Optional[str], obje
             return
         raw += float(rate_per_min) * minutes
 
-    if facility_id:
+    if subject_id in world.entity_name_index:
+        # If subject is a facility, use its bodyEnergy_per_min
         for f in world.facilities:
-            if f.node_id == facility_id:
+            if f.node_id == subject_id:
                 add(f.bodyEnergy_per_min)
                 break
-
-    if object_ids:
-        s = set(object_ids)
+        # If subject is an object, use its bodyEnergy_per_min
         for o in world.objects:
-            if o.node_id in s:
+            if o.node_id == subject_id:
                 add(o.bodyEnergy_per_min)
+                break
 
     # 压缩到 [-1,1]：用 tanh 类似的饱和（也可改为 clamp(raw, -1,1)）
     return math.tanh(raw)
 
-def generate_observations(world: WorldModel, cfg_full: 'EngineConfig', agent_id: Optional[str] = None) -> List[Observation]:
+def generate_observations(world: WorldModel, cfg_full: 'EngineConfig') -> List[Observation]:
     cfg = cfg_full.observation_gen
     allocations = cfg_full.intent_allocations or {}
     
@@ -66,10 +66,7 @@ def generate_observations(world: WorldModel, cfg_full: 'EngineConfig', agent_id:
 
     rnd = random.Random(cfg.seed)
 
-    agent_ids = [a.agent_id for a in world.agents] or list(world.agent_name_index.keys()) or ["Agent_01"]
-    if agent_id is not None:
-        agent_ids = [agent_id]
-
+    agent_ids = [a.agent_id for a in world.agents]
     loc_ids = [l.node_id for l in world.locations]
     fac_ids = [f.node_id for f in world.facilities]
     obj_ids = [o.node_id for o in world.objects]
@@ -78,48 +75,34 @@ def generate_observations(world: WorldModel, cfg_full: 'EngineConfig', agent_id:
     t0 = time.time()
 
     for i in range(cfg.n):
-        aid = rnd.choice(agent_ids)
+        subject_id = rnd.choice(agent_ids+fac_ids+obj_ids)
         duration = float(rnd.uniform(*cfg.duration_s_range))
         t_start = float(t0 + i * 10.0)
         t_end = float(t_start + duration)
 
         location_id = rnd.choice(loc_ids) if loc_ids else None
-        # 逻辑修改：
-        # 1. 尝试从已分配了物体的 Intent 中随机选一个作为“主导动机”
-        # 2. 或者随机选一个 Facility，然后看它对应哪些 related_actions
         
         facility_id = rnd.choice(fac_ids) if fac_ids else None
         
         # 计算 related_actions
         current_related = []
-        if facility_id in entity_to_intents:
-            current_related.extend(entity_to_intents[facility_id])
-            
-        k_obj = rnd.randint(0, max(cfg.choose_objects_max, 0))
-        chosen_obj_ids = rnd.sample(obj_ids, k=min(k_obj, len(obj_ids))) if obj_ids and k_obj > 0 else []
-        
-        for oid in chosen_obj_ids:
-            if oid in entity_to_intents:
-                current_related.extend(entity_to_intents[oid])
+        if subject_id in entity_to_intents:
+            current_related.extend(entity_to_intents[subject_id])
         
         # 去重
         current_related = list(set(current_related))
-        
-        # 如果该物体没有分配任何 intent，且定义了全局 intent，则保底给一个
-        if not current_related and cfg_full.intent_actions:
-            current_related = [rnd.choice(cfg_full.intent_actions)]
 
         capacity, occupied = _infer_capacity_occupied(world, facility_id)
-
+        action = rnd.choice(["Walk", "See", "Interact", "Communicate", "Change"])
         evidence = Evidence(
             duration_s=round(duration, 1),
             progress_count=int(rnd.randint(*cfg.progress_count_range)),
-            capacity=int(capacity or 0),
-            occupied=bool(occupied),
-            action=None
+            capacity=int(capacity or 0) if subject_id in world.entity_name_index else None,
+            occupied=bool(occupied) if subject_id in world.entity_name_index else None,
+            action=action if subject_id in world.agent_name_index else None
         )
 
-        body_delta = _infer_body_energy_delta(world, facility_id, chosen_obj_ids, duration)
+        body_delta = _infer_body_energy_delta(world, subject_id, duration)
         body_delta = float(_clamp(body_delta, -1.0, 1.0))
 
         ep = EvidenceProfile(
@@ -129,7 +112,11 @@ def generate_observations(world: WorldModel, cfg_full: 'EngineConfig', agent_id:
             extra={},
         )
 
-        subjects = world.agent_name_index.get(aid, aid)
+        if subject_id in world.agent_name_index:
+            subjects = world.agent_name_index[subject_id]
+        elif subject_id in world.entity_name_index:
+            subjects = world.entity_name_index[subject_id]
+
         location = [world.entity_name_index.get(location_id, location_id)] if location_id else []
 
         obs_list.append(Observation(

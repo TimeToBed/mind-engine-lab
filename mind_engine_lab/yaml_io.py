@@ -20,3 +20,13 @@ def load_config_yaml(path: str) -> EngineConfig:
 
 def dump_yaml(data: Dict[str, Any]) -> str:
     return yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
+
+
+def load_yaml_to_cfg(yaml_text: str) -> EngineConfig:
+    data = yaml.safe_load(yaml_text) or {}
+    return EngineConfig.model_validate(data)
+
+
+def compile_yaml(cfg: EngineConfig) -> str:
+    data = cfg.model_dump(by_alias=True, exclude_none=True)
+    return yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
