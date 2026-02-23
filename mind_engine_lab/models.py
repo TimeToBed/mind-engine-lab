@@ -114,7 +114,6 @@ class ActionMeaning(BaseModel):
 
 class PluginConfig(BaseModel):
     action_aggregator: str = "weighted_sum"
-    entity_aggregator: str = "subject_plus_objects_sum"
     arbiter: str = "default"
     params: Dict[str, Any] = Field(default_factory=dict)
 

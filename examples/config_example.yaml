@@ -1,31 +1,41 @@
 schema_version: "0.1"
-stimulus_dims: ["social_intensity", "info_exposure", "comfort"]
-intent_actions: ["watch_game", "chat", "rest"]
+stimulus_dims: ["achievement", "belonging", "comfort"]
+intent_actions: ["get_info", "socialize", "rest"]
 
 action_meanings:
-  - action: "watch_game"
-    meas:
-      social_intensity: {desc: "crowd exposure", value: "min(capacity, nearby_agents)", polarity: "+", weight: 0.6}
-      info_exposure: {desc: "time on content", value: "duration_s/60", polarity: "+", weight: 0.5}
-      comfort: {desc: "fatigue + energy", value: "(-duration_s/600) + psych.energy", polarity: "+", weight: 0.4}
-  - action: "chat"
-    meas:
-      social_intensity: {desc: "conversation density", value: "nearby_agents", polarity: "+", weight: 0.7}
-      info_exposure: {desc: "new info", value: "cog.curiosity * duration_s/120", polarity: "+", weight: 0.5}
-      comfort: {desc: "social cost", value: "psych.stress * nearby_agents/10", polarity: "-", weight: 0.4}
-  - action: "rest"
-    meas:
-      comfort: {desc: "recover", value: "clamp(1 - duration_s/600, 0, 1) + (1-psych.stress)", polarity: "+", weight: 0.8}
+  - action_name: get_info
+    means:
+      achievement:
+        desc: "联想：信息获取可能提升成就/掌控；当前成就越低，预期收益越大；信息机会随可用时长上升并饱和。"
+        value: "clamp((1 - observer_state.psych_state.achievement) * clamp(duration_s/60*0.2, 0, 1), 0, 1)"
+        polarity: "+"
+        weight: 0.7
+      comfort:
+        desc: "联想：获取信息可缓解无聊带来轻微愉悦；当前舒适越低，预期缓解越大。"
+        value: "clamp((1 - observer_state.psych_state.comfort) * 0.15, 0, 1)"
+        polarity: "+"
+        weight: 0.3
+  - action_name: socialize
+    means:
+      belonging:
+        desc: "联想：社交能提升归属；当前归属越低，预期收益越大；机会随可互动对象数增加并受容量限制。"
+        value: "clamp((1 - observer_state.psych_state.belonging) * clamp(capacity/max(1,capacity), 0, 1), 0, 1)"
+        polarity: "+"
+        weight: 0.7
+      comfort:
+        desc: "联想：社交可能带来情绪支持；当前舒适越低，预期缓解越大；机会随附近人增加。"
+        value: "clamp((1 - observer_state.psych_state.comfort) * clamp(capacity*0.05, 0, 1), 0, 1)"
+        polarity: "+"
+        weight: 0.4
 
 plugins:
   action_aggregator: "weighted_sum"
-  entity_aggregator: "subject_plus_objects_sum"
   arbiter: "default"
   params:
-    entity_aggregator: {w_subject: 1.0, w_objects: 0.3}
     arbiter: {top_k: 3, alpha: 1.0, beta: 1.0, nonlin: "none", level_mid: 0.3, level_hi: 0.7}
 
 agents:
-  - agent_id: "Agent_01"
-    psych_state: {stress: 0.2, energy: 0.6}
-    cog_attr: {curiosity: 0.5}
+  - agent_name: "贾小红",
+    phys_state: { "bodyEnergy": 0.62, "mindEnergy": 0.51}, # 变量平台定义，用户可以改数值
+    psych_state: { "comfort": 0.55, "achievement": 0.40, "belonging": 0.30, "security": 0.65 }, # 变量用户定义
+    cog_attr: { "身份": "学生", "性格": "内向"}

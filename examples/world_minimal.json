@@ -40,7 +40,5 @@
             "agent_name": "A1",
             "describe": "test agent"
         }
-    ],
-    "entity_index": {},
-    "agent_index": {}
+    ]
 }
