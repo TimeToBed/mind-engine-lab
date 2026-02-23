@@ -4,7 +4,7 @@ from typing import List, Optional
 import random
 import time
 import math
-from .models import WorldModel, Observation, EvidenceProfile, Evidence, Deltas, ObservationGenConfig
+from .models import EngineConfig, WorldModel, Observation, EvidenceProfile, Evidence, Deltas, ObservationGenConfig
 
 from datetime import datetime
 
@@ -52,7 +52,18 @@ def _infer_body_energy_delta(world: WorldModel, facility_id: Optional[str], obje
     # 压缩到 [-1,1]：用 tanh 类似的饱和（也可改为 clamp(raw, -1,1)）
     return math.tanh(raw)
 
-def generate_observations(world: WorldModel, cfg: ObservationGenConfig, agent_id: Optional[str] = None) -> List[Observation]:
+def generate_observations(world: WorldModel, cfg_full: 'EngineConfig', agent_id: Optional[str] = None) -> List[Observation]:
+    cfg = cfg_full.observation_gen
+    allocations = cfg_full.intent_allocations or {}
+    
+    # 建立反向索引：node_id -> List[intent_name]
+    entity_to_intents = {}
+    for intent, node_ids in allocations.items():
+        for nid in node_ids:
+            if nid not in entity_to_intents:
+                entity_to_intents[nid] = []
+            entity_to_intents[nid].append(intent)
+
     rnd = random.Random(cfg.seed)
 
     agent_ids = [a.agent_id for a in world.agents] or list(world.agent_name_index.keys()) or ["Agent_01"]
@@ -73,10 +84,30 @@ def generate_observations(world: WorldModel, cfg: ObservationGenConfig, agent_id
         t_end = float(t_start + duration)
 
         location_id = rnd.choice(loc_ids) if loc_ids else None
+        # 逻辑修改：
+        # 1. 尝试从已分配了物体的 Intent 中随机选一个作为“主导动机”
+        # 2. 或者随机选一个 Facility，然后看它对应哪些 related_actions
+        
         facility_id = rnd.choice(fac_ids) if fac_ids else None
-
+        
+        # 计算 related_actions
+        current_related = []
+        if facility_id in entity_to_intents:
+            current_related.extend(entity_to_intents[facility_id])
+            
         k_obj = rnd.randint(0, max(cfg.choose_objects_max, 0))
         chosen_obj_ids = rnd.sample(obj_ids, k=min(k_obj, len(obj_ids))) if obj_ids and k_obj > 0 else []
+        
+        for oid in chosen_obj_ids:
+            if oid in entity_to_intents:
+                current_related.extend(entity_to_intents[oid])
+        
+        # 去重
+        current_related = list(set(current_related))
+        
+        # 如果该物体没有分配任何 intent，且定义了全局 intent，则保底给一个
+        if not current_related and cfg_full.intent_actions:
+            current_related = [rnd.choice(cfg_full.intent_actions)]
 
         capacity, occupied = _infer_capacity_occupied(world, facility_id)
 
@@ -93,8 +124,8 @@ def generate_observations(world: WorldModel, cfg: ObservationGenConfig, agent_id
 
         ep = EvidenceProfile(
             evidence=evidence,
-            deltas=Deltas(agent_phys={"bodyEnergy": round(body_delta, 3)}, extra={}),
-            related_actions=None,   # 关键：不出现该键
+            deltas=Deltas(agent_phys={"bodyEnergy": round(body_delta, 3)}),
+            related_actions=current_related, # 填充关联动作
             extra={},
         )
 

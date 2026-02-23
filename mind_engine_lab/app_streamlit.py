@@ -306,6 +306,51 @@ def main():
         cfg.intent_actions = df_to_actions(actions_df_edit)
 
         st.divider()
+        st.subheader("Interactive Allocation (交互分配)")
+        
+        if not st.session_state["world"]:
+            st.warning("请先在侧边栏导入世界配置 (xlsx) 以进行物体分配。")
+        elif not cfg.intent_actions:
+            st.warning("请先定义 Intent_actions。")
+        else:
+            # 1. 准备可选物体列表 (Facilities + Objects)
+            world = st.session_state["world"]
+            available_entities = []
+            entity_display_map = {} # node_id -> "name (id)"
+            
+            for f in world.facilities:
+                label = f"{f.node_name} ({f.node_id})"
+                available_entities.append(f.node_id)
+                entity_display_map[f.node_id] = label
+            for o in world.objects:
+                label = f"{o.node_name} ({o.node_id})"
+                available_entities.append(o.node_id)
+                entity_display_map[o.node_id] = label
+            
+            # 2. 为每个 Intent 创建多选下拉框
+            if cfg.intent_allocations is None:
+                cfg.intent_allocations = {}
+                
+            alloc_col1, alloc_col2 = st.columns(2)
+            for i, act in enumerate(cfg.intent_actions):
+                # 交替放在两列中
+                target_col = alloc_col1 if i % 2 == 0 else alloc_col2
+                
+                current_selected = cfg.intent_allocations.get(act, [])
+                # 过滤掉可能在 world 中不存在的旧 ID
+                current_selected = [eid for eid in current_selected if eid in entity_display_map]
+                
+                selected_ids = target_col.multiselect(
+                    f"分配物体给: {act}",
+                    options=available_entities,
+                    default=current_selected,
+                    format_func=lambda x: entity_display_map.get(x, x),
+                    key=f"alloc_{act}"
+                )
+                cfg.intent_allocations[act] = selected_ids
+
+
+        st.divider()
         st.subheader("ActionMeaning（动作 → 维度 meas 公式）")
 
         # stimulus dims (platform/global)

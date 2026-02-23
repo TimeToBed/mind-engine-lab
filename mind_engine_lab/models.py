@@ -129,14 +129,16 @@ class ObservationGenConfig(BaseModel):
 
 class EngineConfig(BaseModel):
     schema_version: str = "0.1"
-    stimulus_dims: List[str] = Field(default_factory=lambda: ["social_intensity", "info_exposure", "comfort"])
-    intent_actions: List[str] = Field(default_factory=lambda: ["watch_game", "chat", "rest"])
+    stimulus_dims: List[str] = Field(default_factory=lambda: ["achievement", "info_exposure", "comfort"])
+    intent_actions: List[str] = Field(default_factory=lambda: ["get_info", "socialize", "exercise", "rest", "create"])
+
+    # 新增：建立 Intent -> List[node_id] 的映射关系
+    intent_allocations: Dict[str, List[str]] = Field(default_factory=dict)
 
     action_meanings: List[ActionMeaning] = Field(default_factory=list)
     plugins: PluginConfig = Field(default_factory=PluginConfig)
     observers: List[ObserverState] = Field(default_factory=list)
     observation_gen: ObservationGenConfig = Field(default_factory=ObservationGenConfig)
-
 
 # ---- L2/L3/L4 outputs ----
 class MotivationSignal(BaseModel):
