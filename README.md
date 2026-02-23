@@ -23,7 +23,7 @@ streamlit run app.py
 ```
 
 ## CLI
-
+一般不使用 CLI，除非需要批量生成 Observation 或自动化测试：
 ```bash
 mind-engine import-world --xlsx /path/to/Object_Table_world_config_v0_4.xlsx --out data/world.json
 mind-engine gen-obs --world data/world.json --out data/observations.json --n 20 --seed 42
