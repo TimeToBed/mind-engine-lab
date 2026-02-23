@@ -1,0 +1,31 @@
+schema_version: "0.1"
+stimulus_dims: ["social_intensity", "info_exposure", "comfort"]
+intent_actions: ["watch_game", "chat", "rest"]
+
+action_meanings:
+  - action: "watch_game"
+    meas:
+      social_intensity: {desc: "crowd exposure", value: "min(capacity, nearby_agents)", polarity: "+", weight: 0.6}
+      info_exposure: {desc: "time on content", value: "duration_s/60", polarity: "+", weight: 0.5}
+      comfort: {desc: "fatigue + energy", value: "(-duration_s/600) + psych.energy", polarity: "+", weight: 0.4}
+  - action: "chat"
+    meas:
+      social_intensity: {desc: "conversation density", value: "nearby_agents", polarity: "+", weight: 0.7}
+      info_exposure: {desc: "new info", value: "cog.curiosity * duration_s/120", polarity: "+", weight: 0.5}
+      comfort: {desc: "social cost", value: "psych.stress * nearby_agents/10", polarity: "-", weight: 0.4}
+  - action: "rest"
+    meas:
+      comfort: {desc: "recover", value: "clamp(1 - duration_s/600, 0, 1) + (1-psych.stress)", polarity: "+", weight: 0.8}
+
+plugins:
+  action_aggregator: "weighted_sum"
+  entity_aggregator: "subject_plus_objects_sum"
+  arbiter: "default"
+  params:
+    entity_aggregator: {w_subject: 1.0, w_objects: 0.3}
+    arbiter: {top_k: 3, alpha: 1.0, beta: 1.0, nonlin: "none", level_mid: 0.3, level_hi: 0.7}
+
+agents:
+  - agent_id: "Agent_01"
+    psych_state: {stress: 0.2, energy: 0.6}
+    cog_attr: {curiosity: 0.5}

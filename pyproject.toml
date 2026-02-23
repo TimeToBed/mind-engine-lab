@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mind-engine-lab"
+version = "0.1.0"
+description = "Researcher WebUI + DSL + plugin-based mind engine (L1-L4) with random Observation generator and YAML compiler."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "pydantic>=2.5",
+  "PyYAML>=6.0",
+  "openpyxl>=3.1",
+  "pandas>=2.0",
+  "numpy>=1.24",
+  "streamlit>=1.31",
+]
+authors = [{name="Research Platform"}]
+license = {text="MIT"}
+
+[project.scripts]
+mind-engine = "mind_engine_lab.cli:main"

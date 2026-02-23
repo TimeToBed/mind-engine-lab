@@ -1,0 +1,23 @@
+{
+  "obs_id": "obs_00000",
+  "t_start": 0.0,
+  "t_end": 180.0,
+  "agent_id": "Agent_01",
+  "location_id": "L_01",
+  "facility_id": "F_01",
+  "object_ids": ["O_01"],
+  "evidence_profile": {
+    "evidence": {
+      "duration_s": 180.0,
+      "progress_count": 1,
+      "capacity": 50,
+      "occupied": 10,
+      "nearby_agents": 8,
+      "extra": {}
+    },
+    "deltas": {"agent_phys": {"bodyEnergy": -2.0}, "extra": {}},
+    "related_actions": ["watch_game", "chat"],
+    "extra": {}
+  },
+  "status": "final"
+}

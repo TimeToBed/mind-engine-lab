@@ -1,0 +1,46 @@
+{
+    "locations": [
+        {
+            "node_id": "L_01",
+            "node_name": "Stadium",
+            "node_type": "location",
+            "location_type": "stadium",
+            "parent_id": null,
+            "path": "/",
+            "x": 0,
+            "y": 0
+        }
+    ],
+    "facilities": [
+        {
+            "node_id": "F_01",
+            "node_name": "SeatArea",
+            "node_type": "facility",
+            "facility_type": "seats",
+            "parent_id": "L_01",
+            "capacity": 50,
+            "occupied": 10,
+            "bodyEnergy(/min)": -0.5
+        }
+    ],
+    "objects": [
+        {
+            "node_id": "O_01",
+            "node_name": "Screen",
+            "node_type": "object",
+            "object_type": "display",
+            "parent_id": "F_01",
+            "is_consumable": false,
+            "bodyEnergy(/min)": 0.0
+        }
+    ],
+    "agents": [
+        {
+            "agent_id": "Agent_01",
+            "agent_name": "A1",
+            "describe": "test agent"
+        }
+    ],
+    "entity_index": {},
+    "agent_index": {}
+}
